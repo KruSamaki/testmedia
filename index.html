@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Social Media</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
+</head>
+<body>
+    <header>
+        <h1>School Social Media</h1>
+        <nav>
+            <ul id="menu">
+                <li><button onclick="showLoginForm()">Login</button></li>
+                <li><button onclick="showRegisterForm()">Register</button></li>
+                <li><button onclick="logout()" id="logout" style="display:none;">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="loading-spinner" style="display: none;"></div>
+
+        <section id="post-section" style="display:none;">
+            <h2>Create Post</h2>
+            <form id="post-form" onsubmit="createPost(event)">
+                <textarea id="post-content" required placeholder="Share your knowledge..."></textarea>
+                <select id="post-label">
+                    <option value="Math">Math</option>
+                    <option value="Khmer">Khmer</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Technology">Technology</option>
+                </select>
+                <button type="submit">Post</button>
+            </form>
+        </section>
+
+        <section id="posts">
+            <h2>Posts</h2>
+            <div id="filters">
+                <button onclick="filterPosts('Math')">Math</button>
+                <button onclick="filterPosts('Khmer')">Khmer</button>
+                <button onclick="filterPosts('Biology')">Biology</button>
+                <button onclick="filterPosts('Technology')">Technology</button>
+                <button onclick="loadPosts()">All</button>
+            </div>
+            <ul id="post-list"></ul>
+        </section>
+
+        <section id="auth-section">
+            <form id="login-form" onsubmit="login(event)" style="display:none;">
+                <h2>Login</h2>
+                <input type="email" id="login-email" required placeholder="Email">
+                <input type="password" id="login-password" required placeholder="Password">
+                <button type="submit">Login</button>
+            </form>
+
+            <form id="register-form" onsubmit="register(event)" style="display:none;">
+                <h2>Register</h2>
+                <input type="email" id="register-email" required placeholder="Email">
+                <input type="password" id="register-password" required placeholder="Password">
+                <select id="register-role">
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
+                </select>
+                <button type="submit">Register</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
