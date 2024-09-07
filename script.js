@@ -1,184 +1,128 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycbxuu4wCrr_R-0QoNvjVUKhfNXtQdi9eQ37tuuRKjyE509tzKrIYyR1FSE1eSQu4As-B/exec'; // Replace with your Web App URL
+const API_KEY = 'AIzaSyCVySc4qfLSCIelBrcqvdhoxGWWezmUd2g'; // Add your Google API key here
+const SHEET_ID = '1uijP3XoxiWsZKv_HzzCJu9i4rqnt0qbkDMoFChSfxGM'; // Replace with your sheet ID
+const USERS_SHEET = 'Users';
+const POSTS_SHEET = 'Posts';
 
-// Show loading spinner
-function showLoading() {
-    document.getElementById('loading-spinner').style.display = 'block';
+// Load Google API Client
+gapi.load('client', initClient);
+
+// Initialize the API client
+function initClient() {
+    gapi.client.init({
+        apiKey: API_KEY,
+        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+    });
 }
 
-// Hide loading spinner
-function hideLoading() {
-    document.getElementById('loading-spinner').style.display = 'none';
-}
-
-// Show login form
-function showLoginForm() {
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('register-form').style.display = 'none';
-}
-
-// Show registration form
-function showRegisterForm() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('register-form').style.display = 'block';
-}
-
-// Register user
+// Register a new user
 async function register(event) {
     event.preventDefault();
-    showLoading();
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
     const role = document.getElementById('register-role').value;
 
-    const payload = { action: 'registerUser', email, password, role };
-
     try {
-        const response = await fetch(scriptURL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        hideLoading();
-        alert(data.message);
+        await appendRowToSheet(USERS_SHEET, [email, password, role]);
+        alert('Registration successful!');
     } catch (error) {
-        console.error('Error registering user:', error);
-        hideLoading();
+        console.error('Error during registration:', error);
         alert('Failed to register.');
     }
 }
 
 // Login user
-// Login user and store session
 async function login(event) {
     event.preventDefault();
-    showLoading();
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
-    const payload = { action: 'loginUser', email, password };
-
     try {
-        const response = await fetch(scriptURL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        hideLoading();
-        if (data.success) {
+        const users = await getSheetData(USERS_SHEET);
+        const user = users.find(row => row[0] === email && row[1] === password);
+        if (user) {
             alert('Login successful');
-            
-            // Store user session data
-            sessionStorage.setItem('authorEmail', email);
-            sessionStorage.setItem('authorRole', data.role);
-
-            document.getElementById('login-form').style.display = 'none';
             document.getElementById('post-section').style.display = 'block';
             document.getElementById('logout').style.display = 'block';
             loadPosts();
         } else {
-            alert(data.message);
+            alert('Invalid credentials');
         }
     } catch (error) {
-        console.error('Error logging in:', error);
-        hideLoading();
-        alert('Failed to log in.');
+        console.error('Error during login:', error);
+        alert('Login failed.');
     }
 }
 
-
-// Create a post
-// Create a post with dynamic author and role
+// Create a new post
 async function createPost(event) {
     event.preventDefault();
-    showLoading();
     const content = document.getElementById('post-content').value;
     const label = document.getElementById('post-label').value;
-    
-    // Assuming `authorEmail` and `authorRole` are stored after login
-    const author = sessionStorage.getItem('authorEmail');  
-    const role = sessionStorage.getItem('authorRole');
-
-    if (!author || !role) {
-        alert('You need to be logged in to post.');
-        hideLoading();
-        return;
-    }
-
-    const payload = { action: 'postContent', author, role, content, label };
+    const author = 'author_email@example.com'; // Replace with actual author data
+    const role = 'author_role'; // Replace with actual role data
 
     try {
-        const response = await fetch(scriptURL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        hideLoading();
-        alert(data.message);
+        await appendRowToSheet(POSTS_SHEET, [author, role, content, label, new Date().toISOString()]);
+        alert('Post created successfully!');
         loadPosts();
     } catch (error) {
         console.error('Error creating post:', error);
-        hideLoading();
         alert('Failed to create post.');
     }
 }
 
-
-// Load posts with optional label filter
+// Load posts
 async function loadPosts(label = '') {
-    showLoading();
     try {
-        const res = await fetch(`${scriptURL}?action=getPosts&label=${label}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            mode: 'cors'
-        });
-        const posts = await res.json();
-        if (res.ok) {
-            renderPosts(posts);
-        } else {
-            Swal.fire('Error', 'Failed to load posts', 'error');
-        }
+        const posts = await getSheetData(POSTS_SHEET);
+        const filteredPosts = label ? posts.filter(post => post[3] === label) : posts;
+        renderPosts(filteredPosts);
     } catch (error) {
-        Swal.fire('Error', 'Network error, please try again later', 'error');
-    } finally {
-        hideLoading();
+        console.error('Error loading posts:', error);
+        alert('Failed to load posts.');
     }
 }
 
-// Display posts
-// Render posts dynamically
+// Append a row to Google Sheets
+async function appendRowToSheet(sheetName, row) {
+    const response = await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: `${sheetName}!A:A`,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+            values: [row]
+        }
+    });
+    return response.result;
+}
+
+// Get data from Google Sheets
+async function getSheetData(sheetName) {
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: `${sheetName}!A:Z`
+    });
+    return response.result.values || [];
+}
+
+// Render posts on the page
 function renderPosts(posts) {
     const postList = document.getElementById('post-list');
-    postList.innerHTML = '';  // Clear existing posts
+    postList.innerHTML = '';
 
     posts.forEach(post => {
         const li = document.createElement('li');
         li.innerHTML = `
-            <strong>${post.author} (${post.role})</strong><br>
-            <p>${post.content}</p>
-            <small>Label: ${post.label}</small><br>
-            <small>Posted on: ${new Date(post.timestamp).toLocaleString()}</small><br>
-            <small>Comments: ${post.comments ? post.comments : 'No comments yet'}</small>
+            <strong>${post[0]} (${post[1]})</strong><br>
+            <p>${post[2]}</p>
+            <small>Label: ${post[3]}</small><br>
+            <small>Posted on: ${new Date(post[4]).toLocaleString()}</small>
         `;
         postList.appendChild(li);
     });
 }
 
-
-// Filter posts by label
-function filterPosts(label) {
-    loadPosts(label);
-}
-
-// Logout user
+// Logout
 function logout() {
     document.getElementById('post-section').style.display = 'none';
     document.getElementById('logout').style.display = 'none';
